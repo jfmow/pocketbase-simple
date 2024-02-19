@@ -15,6 +15,11 @@ import (
 	"suddsy.dev/m/v2/emails"
 )
 
+// TODO:
+/*
+* Delete unused sso tokens after they expire, (cron?)
+ */
+
 func RegisterSSORoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 	e.Router.POST("/api/collections/:collection/auth-with-sso/:method", func(c echo.Context) error {
 		return handleMethodAsign(c, app)
