@@ -13,6 +13,7 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/security"
 	"suddsy.dev/m/v2/emails"
+	"suddsy.dev/m/v2/tools"
 )
 
 // TODO:
@@ -178,11 +179,10 @@ func code(c echo.Context, app *pocketbase.PocketBase) error {
 		return apis.NewApiError(500, "Missing website url env", nil)
 	}
 
-	exeDir, err := os.Executable()
+	wd := tools.GetWorkDir()
 	if err != nil {
 		return apis.NewApiError(500, "Unable to process login", nil)
 	}
-	wd := filepath.Join(exeDir, "..")
 
 	data := make(map[string]interface{})
 

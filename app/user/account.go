@@ -10,19 +10,16 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/models"
+	"suddsy.dev/m/v2/tools"
 )
 
 func NewAccountSetup(e *core.RecordCreateEvent, app *pocketbase.PocketBase) error {
 	user := e.Record.Id
 
-	exeDir, err := os.Executable()
-	WorkingDir := filepath.Join(exeDir, "..")
+	WorkingDir := tools.GetWorkDir()
+
 	if runtime.GOOS != "linux" {
 		log.Panic("Update cancled. This tool only works on linux systems :(")
-		return nil
-	}
-	if err != nil {
-		log.Println("Failed to get the current wd")
 		return nil
 	}
 

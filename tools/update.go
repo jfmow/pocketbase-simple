@@ -70,14 +70,10 @@ func Update() error {
 		return nil
 	}
 
-	WorkingDir, err := os.Executable()
-	if err != nil {
-		log.Panic("Failed to get current working dir. Update stopped.")
-		return err
-	}
+	WorkingDir := GetWorkDir()
 
-	NewBaseFile := filepath.Join(WorkingDir)
-	OldBaseFile := filepath.Join(WorkingDir, "..", "old-base")
+	NewBaseFile := filepath.Join(WorkingDir, "base")
+	OldBaseFile := filepath.Join(WorkingDir, "old-base")
 
 	UniqueDownloadURL, found := os.LookupEnv("UpdateURL")
 	if !found || UniqueDownloadURL == "" {
@@ -105,7 +101,7 @@ func Update() error {
 
 	//Download the new file
 	log.Println("Downloading updated file")
-	err = downloadTheFile(NewBaseFile, DownloadURL)
+	err := downloadTheFile(NewBaseFile, DownloadURL)
 	if err != nil {
 		UpdateFailed = true
 		log.Println("Failed to download the new file")
