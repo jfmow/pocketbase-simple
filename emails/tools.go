@@ -8,7 +8,7 @@ import (
 	"github.com/pocketbase/pocketbase/tools/security"
 )
 
-func loadHtmlFile(filePath string, data map[string]interface{}) (error, string) {
+func LoadHtmlFile(filePath string, data map[string]interface{}) (error, string) {
 	htmlFile, err := os.ReadFile(filePath)
 	if err != nil {
 		return err, ""
