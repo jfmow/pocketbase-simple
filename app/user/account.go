@@ -80,8 +80,11 @@ func NewAccountSetup(e *core.RecordCreateEvent, app *pocketbase.PocketBase) erro
 	newUserFlagsRecord.Set("maxUploadSize", 5485760)
 	newUserFlagsRecord.Set("quota", 10485760)
 
-	if e.HttpContext.Get("sso").(bool) {
-		newUserFlagsRecord.Set("sso", true)
+	if sso, ok := e.HttpContext.Get("sso").(bool); ok {
+		// Value exists, proceed with your logic
+		if sso {
+			newUserFlagsRecord.Set("sso", true)
+		}
 	}
 
 	if err := app.Dao().SaveRecord(newUserFlagsRecord); err != nil {

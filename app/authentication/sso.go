@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v5"
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -36,6 +37,8 @@ func handleMethodAsign(c echo.Context, app *pocketbase.PocketBase) error {
 		return signup(c, app)
 	case "code":
 		return code(c, app)
+	case "toggle":
+		return toggle(c, app)
 	}
 	return apis.NewNotFoundError("Method not found", nil)
 }
@@ -77,8 +80,10 @@ func signup(c echo.Context, app *pocketbase.PocketBase) error {
 	// Set the users password
 	randomPassword := security.RandomString(38)
 	randomTokenKey := security.RandomString(24)
-	newUserRecord.Set("password", randomPassword)
-	newUserRecord.Set("passwordConfirm", randomPassword)
+	newUserRecord.SetPassword(randomPassword)
+	if !newUserRecord.ValidatePassword(randomPassword) {
+		return apis.NewApiError(500, "Failed to validate p", nil)
+	}
 
 	newUserRecord.Set("tokenKey", randomTokenKey)
 
@@ -126,8 +131,11 @@ func login(c echo.Context, app *pocketbase.PocketBase) error {
 		return apis.NewApiError(500, "Failed to find account", nil)
 	}
 
-	userFlags, err := app.Dao().FindFirstRecordByData("user_flags", "user", userRecord.Id)
-	if err != nil || !userFlags.GetBool("sso") || userFlags.GetString("collection") != collection.Id {
+	userFlags, err := app.Dao().FindFirstRecordByFilter(
+		"user_flags", "user = {:userId} && collection = {:collectionId}",
+		dbx.Params{"userId": userRecord.Id, "collectionId": collection.Id},
+	)
+	if err != nil || !userFlags.GetBool("sso") {
 		return apis.NewUnauthorizedError("Method not allowed", nil)
 	}
 
@@ -167,8 +175,11 @@ func code(c echo.Context, app *pocketbase.PocketBase) error {
 		return apis.NewForbiddenError("Not account found with that email", nil)
 	}
 
-	userFlagsRecord, err := app.Dao().FindFirstRecordByData("user_flags", "user", userRecord.Id)
-	if err != nil || userFlagsRecord == nil || !userFlagsRecord.GetBool("sso") || userFlagsRecord.GetString("collection") != collection.Id {
+	userFlagsRecord, err := app.Dao().FindFirstRecordByFilter(
+		"user_flags", "user = {:userId} && collection = {:collectionId}",
+		dbx.Params{"userId": userRecord.Id, "collectionId": collection.Id},
+	)
+	if err != nil || !userFlagsRecord.GetBool("sso") {
 		return apis.NewForbiddenError("Method not allowed", nil)
 	}
 
@@ -228,4 +239,97 @@ func code(c echo.Context, app *pocketbase.PocketBase) error {
 	}, email, app)
 
 	return nil
+}
+
+func toggle(c echo.Context, app *pocketbase.PocketBase) error {
+	// Disable sso for the user (if enabled), and give them a password to use (if they don't use oAuth2)
+
+	authRecord, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
+	if authRecord == nil {
+		return apis.NewUnauthorizedError("You must be signed in to access this", nil)
+	}
+
+	collection, err := app.Dao().FindCollectionByNameOrId(c.PathParam("collection"))
+	if err != nil {
+		return err
+	}
+	if collection.Type != "auth" {
+		return apis.NewNotFoundError("Auth collection not found", nil)
+	}
+
+	if authRecord.Collection().Id != collection.Id {
+		return apis.NewUnauthorizedError("Collection mis-match", nil)
+	}
+
+	// Get the users flags
+
+	userFlagsRecord, err := app.Dao().FindFirstRecordByFilter(
+		"user_flags", "user = {:userId} && collection = {:collectionId}",
+		dbx.Params{"userId": authRecord.Id, "collectionId": collection.Id},
+	)
+	if err != nil {
+		return apis.NewApiError(500, "Unable to find relation records", nil)
+	}
+
+	if userFlagsRecord.GetBool("sso") {
+		return disable(c, app, userFlagsRecord, authRecord)
+	} else {
+		// Enable sso, (remove password)
+		return enable(c, app, userFlagsRecord, authRecord)
+	}
+}
+func enable(c echo.Context, app *pocketbase.PocketBase, userFlags *models.Record, authRecord *models.Record) error {
+
+	userFlags.Set("sso", true)
+
+	randomPassword := security.RandomString(21)
+	authRecord.SetPassword(randomPassword)
+	if !authRecord.ValidatePassword(randomPassword) {
+		return apis.NewApiError(500, "Failed to validate p", nil)
+	}
+	authRecord.Set("tokenKey", security.RandomString(32))
+
+	// Save the updated Records
+	if err := app.Dao().SaveRecord(authRecord); err != nil {
+		return err
+	}
+	if err := app.Dao().SaveRecord(userFlags); err != nil {
+		return err
+	}
+
+	return nil
+}
+func disable(c echo.Context, app *pocketbase.PocketBase, userFlags *models.Record, authRecord *models.Record) error {
+
+	userFlags.Set("sso", false)
+
+	data := make(map[string]interface{})
+
+	// Check to see if they use oAuth2 Provider:
+
+	_, err := app.Dao().FindFirstRecordByFilter(
+		"_externalAuths", "recordId = {:userId} && collectionId = {:collection}",
+		dbx.Params{"userId": authRecord.Id, "collection": authRecord.Collection().Id},
+	)
+
+	if err != nil {
+		//Create a password
+		randomPassword := security.RandomString(12)
+		authRecord.SetPassword(randomPassword)
+		if !authRecord.ValidatePassword(randomPassword) {
+			return apis.NewApiError(500, "Failed to validate new password", nil)
+		}
+		authRecord.Set("tokenKey", security.RandomString(32))
+		data["password"] = randomPassword
+	}
+
+	// Save the updated Records
+	if err := app.Dao().SaveRecord(authRecord); err != nil {
+		return err
+	}
+	if err := app.Dao().SaveRecord(userFlags); err != nil {
+		return err
+	}
+
+	return c.JSON(200, data)
 }
