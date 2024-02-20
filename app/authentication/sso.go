@@ -37,8 +37,9 @@ func handleMethodAsign(c echo.Context, app *pocketbase.PocketBase) error {
 		return signup(c, app)
 	case "code":
 		return code(c, app)
-	case "toggle":
-		return toggle(c, app)
+		// DEPRECATED:
+		//case "toggle":
+		//	return toggle(c, app)
 	}
 	return apis.NewNotFoundError("Method not found", nil)
 }
@@ -119,7 +120,7 @@ func login(c echo.Context, app *pocketbase.PocketBase) error {
 		return apis.NewNotFoundError("Auth collection not found", nil)
 	}
 
-	userEmail := c.FormValue("user")
+	userEmail := c.FormValue("email")
 	token := c.FormValue("token")
 
 	if userEmail == "" || token == "" {
@@ -241,6 +242,7 @@ func code(c echo.Context, app *pocketbase.PocketBase) error {
 	return nil
 }
 
+// DEPRECATED!
 func toggle(c echo.Context, app *pocketbase.PocketBase) error {
 	// Disable sso for the user (if enabled), and give them a password to use (if they don't use oAuth2)
 
@@ -278,6 +280,8 @@ func toggle(c echo.Context, app *pocketbase.PocketBase) error {
 		return enable(c, app, userFlagsRecord, authRecord)
 	}
 }
+
+// DEPRECATED!
 func enable(c echo.Context, app *pocketbase.PocketBase, userFlags *models.Record, authRecord *models.Record) error {
 
 	userFlags.Set("sso", true)
@@ -299,6 +303,8 @@ func enable(c echo.Context, app *pocketbase.PocketBase, userFlags *models.Record
 
 	return nil
 }
+
+// DEPRECATED!
 func disable(c echo.Context, app *pocketbase.PocketBase, userFlags *models.Record, authRecord *models.Record) error {
 
 	userFlags.Set("sso", false)
