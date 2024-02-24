@@ -36,6 +36,17 @@ func HandleCreateEvent(e *core.RecordCreateEvent, app *pocketbase.PocketBase) er
 		return apis.NewBadRequestError("File too large!", nil)
 	}
 
+	usageRecord, err := app.Dao().FindRecordById("user_usage", authRecord.Id)
+	if err == nil {
+		if uploadedFileSize+usageRecord.GetInt("total_size") >= record.GetInt("quota") {
+			return apis.NewForbiddenError("You have reached your storage limit", nil)
+		}
+	} else {
+		if uploadedFileSize >= record.GetInt("quota") {
+			return apis.NewForbiddenError("You have reached your storage limit", nil)
+		}
+	}
+
 	e.Record.Set("size", uploadedFileSize)
 
 	if err := app.Dao().SaveRecord(e.Record); err != nil {
@@ -52,7 +63,7 @@ func CheckFilesMatchBlocks(app *pocketbase.PocketBase, c *core.RecordUpdateEvent
 
 	To prevent deletion of files by mistake it checks the data that was just sent to the server rather than getting it from the server and potentialy being ahed of the servers db saving
 	*/
-	if c.Record.GetTime("last_file_check").After(time.Now().Add(-1 * time.Hour)) {
+	if !time.Now().UTC().After(c.Record.GetDateTime("last_file_check").Time().UTC().Add(30 * time.Minute)) {
 		// Return because the record has been checked less than 1 hour ago
 		//This reduces the overall pressure on the db as it finds all the records for a page, it now only has to do this when a page is updated and once per hour. (This time may be extended in high traffic enviroments but it doesn't really make a difference)
 		return nil
@@ -84,21 +95,11 @@ func CheckFilesMatchBlocks(app *pocketbase.PocketBase, c *core.RecordUpdateEvent
 		log.Fatal(err)
 	}
 
-	imageBlocks := []Block{}
 	fileBlocks := []Block{}
 	for _, block := range record.Blocks {
-		if block.Type == "image" {
-			imageBlocks = append(imageBlocks, block)
-		} else if block.Type == "simpleEmbeds" {
+		if block.Type == "image" || block.Type == "simpleEmbeds" {
 			fileBlocks = append(fileBlocks, block)
 		}
-	}
-
-	imgsRecords, err := app.Dao().FindRecordsByExpr("imgs",
-		dbx.NewExp("page = {:pageId}", dbx.Params{"pageId": c.Record.Id}),
-	)
-	if err != nil {
-		return err
 	}
 	filesRecords, err := app.Dao().FindRecordsByExpr("files",
 		dbx.NewExp("page = {:pageId}", dbx.Params{"pageId": c.Record.Id}),
@@ -115,14 +116,6 @@ func CheckFilesMatchBlocks(app *pocketbase.PocketBase, c *core.RecordUpdateEvent
 			}
 		}
 		return false
-	}
-
-	for _, record := range imgsRecords {
-		if !isStringInImageBlocks(imageBlocks, record.Id) {
-			if err := app.Dao().DeleteRecord(record); err != nil {
-				log.Println("Error deleting an img that has no page: " + record.Id)
-			}
-		}
 	}
 
 	for _, record := range filesRecords {
