@@ -16,54 +16,14 @@ import (
 func NewAccountSetup(e *core.RecordCreateEvent, app *pocketbase.PocketBase) error {
 	user := e.Record.Id
 
-	WorkingDir := tools.GetWorkDir()
-
 	if runtime.GOOS != "linux" {
 		log.Panic("Update cancled. This tool only works on linux systems :(")
 		return nil
 	}
 
-	type Page struct {
-		Content  json.RawMessage `json:"content"`
-		Shared   bool            `json:"shared"`
-		Id       string          `json:"id"`
-		Title    string          `json:"title"`
-		Icon     string          `json:"icon"`
-		Unsplash string          `json:"unsplash"`
-	}
-	var previewPage Page
-
-	PreviewPageFile, err := os.ReadFile(filepath.Join(WorkingDir, "preview_page.json"))
+	err, _ := CreatePreviewPage(app, user)
 	if err != nil {
-		log.Println("Failed to read preview_page file/find it")
-	} else {
-		err = json.Unmarshal(PreviewPageFile, &previewPage)
-		if err != nil {
-			return err
-		}
-
-		collection, err := app.Dao().FindCollectionByNameOrId("pages")
-		if err != nil {
-			return err
-		}
-
-		record := models.NewRecord(collection)
-
-		if user == "" {
-			record.Set("id", previewPage.Id)
-		} else {
-			record.Set("owner", user)
-		}
-
-		record.Set("content", previewPage.Content)
-		record.Set("shared", previewPage.Shared)
-		record.Set("title", previewPage.Title)
-		record.Set("icon", previewPage.Icon)
-		record.Set("unsplash", previewPage.Unsplash)
-
-		if err := app.Dao().SaveRecord(record); err != nil {
-			return err
-		}
+		return err
 	}
 
 	userFlagsCollection, err := app.Dao().FindCollectionByNameOrId("user_flags")
@@ -105,4 +65,53 @@ func DeleteUserFlagsOnAccountDelete(e *core.RecordDeleteEvent, app *pocketbase.P
 		return err
 	}
 	return nil
+}
+
+func CreatePreviewPage(app *pocketbase.PocketBase, user string) (error, string) {
+	WorkingDir := tools.GetWorkDir()
+	type Page struct {
+		Content  json.RawMessage `json:"content"`
+		Shared   bool            `json:"shared"`
+		Id       string          `json:"id"`
+		Title    string          `json:"title"`
+		Icon     string          `json:"icon"`
+		Unsplash string          `json:"unsplash"`
+	}
+	var previewPage Page
+
+	PreviewPageFile, err := os.ReadFile(filepath.Join(WorkingDir, "preview_page.json"))
+	if err != nil {
+		log.Println("Failed to read preview_page file/find it")
+		return nil, ""
+	} else {
+		err = json.Unmarshal(PreviewPageFile, &previewPage)
+		if err != nil {
+			return err, ""
+		}
+
+		collection, err := app.Dao().FindCollectionByNameOrId("pages")
+		if err != nil {
+			return err, ""
+		}
+
+		record := models.NewRecord(collection)
+
+		if user == "" {
+			record.Set("id", previewPage.Id)
+		} else {
+			record.Set("owner", user)
+		}
+
+		record.Set("content", previewPage.Content)
+		record.Set("shared", previewPage.Shared)
+		record.Set("title", previewPage.Title)
+		record.Set("icon", previewPage.Icon)
+		record.Set("unsplash", previewPage.Unsplash)
+
+		if err := app.Dao().SaveRecord(record); err != nil {
+			return err, ""
+		}
+		return nil, record.Id
+	}
+
 }

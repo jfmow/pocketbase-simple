@@ -10,15 +10,21 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/models"
 )
 
 func HandleCreateEvent(e *core.RecordCreateEvent, app *pocketbase.PocketBase) error {
 	//Check if the user is part of the default user group, and if so find there flags, else return nil
-	if e.Record.Collection().Name != "users" {
-		return nil
+
+	authRecord, _ := e.HttpContext.Get(apis.ContextAuthRecordKey).(*models.Record)
+	if authRecord == nil || authRecord.Collection().Name != "users" {
+		return apis.NewUnauthorizedError("You must be signed in to access this", nil)
 	}
 
-	record, err := app.Dao().FindFirstRecordByData("user_flags", "user", e.Record.Id)
+	record, err := app.Dao().FindFirstRecordByFilter(
+		"user_flags", "user = {:userID} && collection = {:collectionID}",
+		dbx.Params{"collectionID": authRecord.Collection().Id, "userID": authRecord.Id},
+	)
 	if err != nil || record.Id == "" {
 		return apis.NewUnauthorizedError("User does not have correct permisions", nil)
 	}
@@ -28,6 +34,12 @@ func HandleCreateEvent(e *core.RecordCreateEvent, app *pocketbase.PocketBase) er
 
 	if uploadedFileSize > record.GetInt("maxUploadSize") {
 		return apis.NewBadRequestError("File too large!", nil)
+	}
+
+	e.Record.Set("size", uploadedFileSize)
+
+	if err := app.Dao().SaveRecord(e.Record); err != nil {
+		return err
 	}
 
 	return nil

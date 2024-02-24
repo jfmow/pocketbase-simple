@@ -6,7 +6,9 @@ import (
 
 	"suddsy.dev/m/v2/app/authentication"
 	"suddsy.dev/m/v2/app/user"
+	"suddsy.dev/m/v2/app/user/account"
 	"suddsy.dev/m/v2/tools"
+	"suddsy.dev/m/v2/tools/reset"
 
 	"github.com/joho/godotenv"
 	"github.com/pocketbase/pocketbase"
@@ -29,9 +31,11 @@ func main() {
 		user.RegisterPingRoutes(e, app)
 		tools.CreateDownloadEndpoint(e, app)
 		authentication.RegisterSSORoutes(e, app)
+		account.RegisterAccPagesRoutes(e, app)
+		account.HandleRegisterRoutes(e, app)
 
 		scheduler := cron.New()
-		tools.EnableAutoResetCron(app, scheduler)
+		reset.EnableAutoResetCron(app, scheduler)
 		scheduler.Start()
 
 		return nil
@@ -48,6 +52,11 @@ func main() {
 
 	app.OnRecordAfterCreateRequest("users").Add(func(e *core.RecordCreateEvent) error {
 		return user.NewAccountSetup(e, app)
+	})
+
+	app.OnRecordAfterUnlinkExternalAuthRequest().Add(func(e *core.RecordUnlinkExternalAuthEvent) error {
+
+		return authentication.EnableFromOAuthUnlink(app, e)
 	})
 
 	app.OnRecordAfterDeleteRequest().Add(func(e *core.RecordDeleteEvent) error {

@@ -1,4 +1,4 @@
-package tools
+package reset
 
 import (
 	"log"
@@ -7,6 +7,7 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/cron"
+	"suddsy.dev/m/v2/app/user"
 )
 
 func EnableAutoResetCron(app *pocketbase.PocketBase, scheduler *cron.Cron) error {
@@ -47,7 +48,7 @@ func EnableAutoResetCron(app *pocketbase.PocketBase, scheduler *cron.Cron) error
 				}
 
 			}
-
+			user.CreatePreviewPage(app, "")
 		})
 
 	}

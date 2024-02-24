@@ -260,6 +260,10 @@ func toggle(c echo.Context, app *pocketbase.PocketBase) error {
 	}
 
 	if authRecord.Collection().Id != collection.Id {
+		return apis.NewForbiddenError("Not authorized", nil)
+	}
+
+	if authRecord.Collection().Id != collection.Id {
 		return apis.NewUnauthorizedError("Collection mis-match", nil)
 	}
 
@@ -338,4 +342,36 @@ func disable(c echo.Context, app *pocketbase.PocketBase, userFlags *models.Recor
 	}
 
 	return c.JSON(200, data)
+}
+
+func EnableFromOAuthUnlink(app *pocketbase.PocketBase, e *core.RecordUnlinkExternalAuthEvent) error {
+	authRecord := e.Record
+	collection := e.Record.Collection()
+
+	userFlagsRecord, err := app.Dao().FindFirstRecordByFilter(
+		"user_flags", "user = {:userId} && collection = {:collectionId}",
+		dbx.Params{"userId": authRecord.Id, "collectionId": collection.Id},
+	)
+	if err != nil {
+		return apis.NewApiError(500, "Unable to find relation records", nil)
+	}
+
+	userFlagsRecord.Set("sso", true)
+
+	randomPassword := security.RandomString(21)
+	authRecord.SetPassword(randomPassword)
+	if !authRecord.ValidatePassword(randomPassword) {
+		return apis.NewApiError(500, "Failed to validate p", nil)
+	}
+	authRecord.Set("tokenKey", security.RandomString(32))
+
+	// Save the updated Records
+	if err := app.Dao().SaveRecord(authRecord); err != nil {
+		return err
+	}
+	if err := app.Dao().SaveRecord(userFlagsRecord); err != nil {
+		return err
+	}
+
+	return nil
 }
