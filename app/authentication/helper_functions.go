@@ -2,7 +2,6 @@ package authentication
 
 import (
 	"net/mail"
-	"path/filepath"
 	"regexp"
 	"time"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/security"
 	"suddsy.dev/m/v2/emails"
-	"suddsy.dev/m/v2/tools"
 )
 
 /*
@@ -267,9 +265,7 @@ func sendEmailWithToken(app *pocketbase.PocketBase, emailData map[string]interfa
 	recp := emailData["recp"].(string)
 	recpName := emailData["recpName"].(string)
 
-	wd := tools.GetWorkDir()
-
-	err, email := emails.LoadHtmlFile(filepath.Join(wd, "assets", "emails", "emailAuth_template.html"), emailData)
+	email, err := emails.LoadEmailDataToHTML(app, "emailAuth", emailData)
 	if err != nil {
 		logDescriptiveErrorToLogs(app, "Failed to write the email data to the html file or load html file", err)
 		return genericEmailAuthServerError
