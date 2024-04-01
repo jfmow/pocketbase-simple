@@ -206,7 +206,7 @@ func authenticateEmailAuthToken(app *pocketbase.PocketBase, authCollection *mode
 		return apis.NewBadRequestError("Invalid token", nil)
 	}
 
-	if time.Now().After(userTokenRecord.GetDateTime("expires").Time()) {
+	if time.Now().UTC().After(userTokenRecord.GetDateTime("expires").Time()) {
 		// The token was expired
 		return apis.NewBadRequestError("Invalid token", nil)
 	}
