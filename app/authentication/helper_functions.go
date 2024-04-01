@@ -28,13 +28,13 @@ var (
 )
 
 var (
-	genericEmailAuthServerError           = apis.NewApiError(500, "An error occured processing your request", nil)
-	genericInvalidRequestDataError        = apis.NewBadRequestError("Invalid request data", nil)
-	missingRequestDataError               = apis.NewApiError(500, "Missing setup values", nil)
-	serverMissingEnviromentVariablesError = apis.NewApiError(500, "A server error occured processing your request", nil)
-	accountAlreadyExistsError             = apis.NewBadRequestError("An account already exists with that username/email", nil)
-	authMethodNotSupportedError           = apis.NewBadRequestError("Authentication method not supported", nil)
-	tokenRateLimitError                   = apis.NewBadRequestError("You must wait 5 minutes before requesting a new token", nil)
+	genericEmailAuthServerError    = apis.NewApiError(500, "An error occured processing your request", nil)
+	genericInvalidRequestDataError = apis.NewBadRequestError("Invalid request data", nil)
+	//missingRequestDataError               = apis.NewApiError(500, "Missing setup values", nil)
+	//serverMissingEnviromentVariablesError = apis.NewApiError(500, "A server error occured processing your request", nil)
+	accountAlreadyExistsError   = apis.NewBadRequestError("An account already exists with that username/email", nil)
+	authMethodNotSupportedError = apis.NewBadRequestError("Authentication method not supported", nil)
+	tokenRateLimitError         = apis.NewBadRequestError("You must wait 5 minutes before requesting a new token", nil)
 )
 
 /*
