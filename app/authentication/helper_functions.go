@@ -47,13 +47,13 @@ func logDescriptiveErrorToLogs(app *pocketbase.PocketBase, errorMessage string, 
 	app.Logger().Error(errorMessage, "details", fullError)
 }
 
-func createNewUser(c echo.Context, app *pocketbase.PocketBase, authCollection *models.Collection, userName string, userEmail string) (error, *models.Record) {
+func createNewUser(c echo.Context, app *pocketbase.PocketBase, authCollection *models.Collection, userName string, userEmail string) (*models.Record, error) {
 	record, _ := app.Dao().FindFirstRecordByFilter(
 		authCollection.Id, "email = {:email} || username = {:username}",
 		dbx.Params{"email": userEmail, "username": userName},
 	)
 	if record != nil {
-		return accountAlreadyExistsError, nil
+		return nil, accountAlreadyExistsError
 	}
 
 	newUserRecord := models.NewRecord(authCollection)
@@ -67,7 +67,7 @@ func createNewUser(c echo.Context, app *pocketbase.PocketBase, authCollection *m
 	newUserRecord.SetPassword(randomPassword)
 	if !newUserRecord.ValidatePassword(randomPassword) {
 		logDescriptiveErrorToLogs(app, "Failed to validate the random password when creating a new user", nil)
-		return genericEmailAuthServerError, nil
+		return nil, genericEmailAuthServerError
 	}
 
 	newUserRecord.Set("tokenKey", randomTokenKey)
@@ -77,11 +77,11 @@ func createNewUser(c echo.Context, app *pocketbase.PocketBase, authCollection *m
 	canAccess, err := app.Dao().CanAccessRecord(newUserRecord, apis.RequestInfo(c), newUserRecord.Collection().CreateRule)
 	if !canAccess || err != nil {
 		logDescriptiveErrorToLogs(app, "Create rule not allowing account creation for request", authCollection.Name)
-		return genericEmailAuthServerError, nil
+		return nil, genericEmailAuthServerError
 	}
 
 	if err := app.Dao().SaveRecord(newUserRecord); err != nil {
-		return err, nil
+		return nil, err
 	}
 	// Create a new instance of RecordCreateEvent
 	event := &core.RecordCreateEvent{
@@ -93,34 +93,34 @@ func createNewUser(c echo.Context, app *pocketbase.PocketBase, authCollection *m
 
 	err = app.OnRecordAfterCreateRequest(authCollection.Name).Trigger(event)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
-	return nil, newUserRecord
+	return newUserRecord, nil
 }
 
 /*
 Gets and returns a user
 */
-func getUserRecord(app *pocketbase.PocketBase, authCollection *models.Collection, userEmail string, emailAuthIsEnabledCheck bool) (error, *models.Record) {
+func getUserRecord(app *pocketbase.PocketBase, authCollection *models.Collection, userEmail string, emailAuthIsEnabledCheck bool) (*models.Record, error) {
 	userRecord, err := app.Dao().FindAuthRecordByEmail(authCollection.Id, userEmail)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
-	err, usersFlags := getUsersFlags(app, userRecord)
+	usersFlags, err := getUsersFlags(app, userRecord)
 	if err != nil {
 		// The provided error should do fine
-		return err, nil
+		return nil, err
 	}
 
 	if emailAuthIsEnabledCheck {
 		if !usersFlags.GetBool("sso") {
-			return authMethodNotSupportedError, nil
+			return nil, authMethodNotSupportedError
 		}
 	}
 
-	return nil, userRecord
+	return userRecord, err
 }
 
 /*
@@ -134,7 +134,7 @@ Creates a new sso token
 
 - Errors with apis. for simplicty
 */
-func createEmailAuthToken(app *pocketbase.PocketBase, authCollection *models.Collection, userEmail string, tokenMethod string) (error, *models.Record) {
+func createEmailAuthToken(app *pocketbase.PocketBase, authCollection *models.Collection, userEmail string, tokenMethod string) (*models.Record, error) {
 	randomToken := security.RandomString(tokenLength) /* Doesn't have to be super long as there is no threat of it being guessed that quick as it is random*/
 	collectionId := authCollection.Id                 /* This param will be able to be compared aganist when trying to reterive the token*/
 	tokenExpireyDate := tokenExpiryTime               /* Store the time in utc as thats what pocketbase itself wants*/
@@ -144,7 +144,7 @@ func createEmailAuthToken(app *pocketbase.PocketBase, authCollection *models.Col
 	tokenCollection, err := app.Dao().FindCollectionByNameOrId("sso_tokens")
 	if err != nil {
 		logDescriptiveErrorToLogs(app, "Unable to find the sso_tokens collection", nil)
-		return genericEmailAuthServerError, nil
+		return nil, genericEmailAuthServerError
 	}
 
 	/* Check the user has no old or pending tokens */
@@ -157,10 +157,10 @@ func createEmailAuthToken(app *pocketbase.PocketBase, authCollection *models.Col
 		if time.Now().After(oldTokenRecord.GetDateTime("expires").Time()) {
 			if err := app.Dao().DeleteRecord(oldTokenRecord); err != nil {
 				logDescriptiveErrorToLogs(app, "Unable to delete a users sso token record", err)
-				return err, nil
+				return nil, err
 			}
 		} else {
-			return tokenRateLimitError, nil
+			return nil, tokenRateLimitError
 		}
 	}
 
@@ -176,10 +176,10 @@ func createEmailAuthToken(app *pocketbase.PocketBase, authCollection *models.Col
 
 	if err := app.Dao().SaveRecord(newTokenRecord); err != nil {
 		logDescriptiveErrorToLogs(app, "Unable to create a users sso token record", err)
-		return genericEmailAuthServerError, nil
+		return nil, genericEmailAuthServerError
 	}
 
-	return nil, newTokenRecord
+	return newTokenRecord, nil
 }
 
 /*
@@ -236,15 +236,15 @@ Finds and returns a provided auth collection users flags
 
 not just EmailAuth behavior
 */
-func getUsersFlags(app *pocketbase.PocketBase, userRecord *models.Record) (error, *models.Record) {
+func getUsersFlags(app *pocketbase.PocketBase, userRecord *models.Record) (*models.Record, error) {
 	userFlags, err := app.Dao().FindFirstRecordByFilter(
 		"user_flags", "user = {:userId} && collection = {:collectionId}",
 		dbx.Params{"userId": userRecord.Id, "collectionId": userRecord.Collection().Id},
 	)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
-	return nil, userFlags
+	return userFlags, nil
 }
 
 /*
