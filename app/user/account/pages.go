@@ -49,7 +49,7 @@ func createBlankPage(c echo.Context, app *pocketbase.PocketBase) error {
 		return c.JSON(302, data)
 	}
 
-	err, pageId := CreatePreviewPage(app, authRecord.Id)
+	pageId, err := CreatePreviewPage(app, authRecord.Id)
 
 	if err != nil {
 		return err

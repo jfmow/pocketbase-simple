@@ -5,10 +5,11 @@ import (
 	"os"
 
 	"suddsy.dev/m/v2/app/authentication"
+	"suddsy.dev/m/v2/app/tools"
+	"suddsy.dev/m/v2/app/tools/lifetime"
 	"suddsy.dev/m/v2/app/user"
 	"suddsy.dev/m/v2/app/user/account"
 	"suddsy.dev/m/v2/app/user/pages"
-	"suddsy.dev/m/v2/tools"
 
 	"github.com/joho/godotenv"
 	"github.com/pocketbase/pocketbase"
@@ -34,7 +35,7 @@ func main() {
 		account.HandleRegisterRoutes(e, app)
 
 		scheduler := cron.New()
-		user.EnableAutoResetCron(app, scheduler)
+		lifetime.EnableAutoResetCron(app, scheduler)
 		scheduler.Start()
 
 		return nil

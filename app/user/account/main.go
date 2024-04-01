@@ -10,7 +10,7 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/models"
-	"suddsy.dev/m/v2/tools"
+	"suddsy.dev/m/v2/app/tools"
 )
 
 func NewAccountSetup(e *core.RecordCreateEvent, app *pocketbase.PocketBase) error {
@@ -21,7 +21,7 @@ func NewAccountSetup(e *core.RecordCreateEvent, app *pocketbase.PocketBase) erro
 		return nil
 	}
 
-	err, _ := CreatePreviewPage(app, user)
+	_, err := CreatePreviewPage(app, user)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func DeleteUserFlagsOnAccountDelete(e *core.RecordDeleteEvent, app *pocketbase.P
 	return nil
 }
 
-func CreatePreviewPage(app *pocketbase.PocketBase, user string) (error, string) {
+func CreatePreviewPage(app *pocketbase.PocketBase, user string) (string, error) {
 	WorkingDir := tools.GetWorkDir()
 	type Page struct {
 		Content  json.RawMessage `json:"content"`
@@ -82,16 +82,16 @@ func CreatePreviewPage(app *pocketbase.PocketBase, user string) (error, string) 
 	PreviewPageFile, err := os.ReadFile(filepath.Join(WorkingDir, "preview_page.json"))
 	if err != nil {
 		log.Println("Failed to read preview_page file/find it")
-		return nil, ""
+		return "", nil
 	} else {
 		err = json.Unmarshal(PreviewPageFile, &previewPage)
 		if err != nil {
-			return err, ""
+			return "", nil
 		}
 
 		collection, err := app.Dao().FindCollectionByNameOrId("pages")
 		if err != nil {
-			return err, ""
+			return "", nil
 		}
 
 		record := models.NewRecord(collection)
@@ -109,9 +109,9 @@ func CreatePreviewPage(app *pocketbase.PocketBase, user string) (error, string) 
 		record.Set("unsplash", previewPage.Unsplash)
 
 		if err := app.Dao().SaveRecord(record); err != nil {
-			return err, ""
+			return "", nil
 		}
-		return nil, record.Id
+		return record.Id, nil
 	}
 
 }

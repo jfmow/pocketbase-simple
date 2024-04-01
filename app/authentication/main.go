@@ -58,7 +58,7 @@ func startSignup(c echo.Context, app *pocketbase.PocketBase, authCollection *mod
 		return apis.NewBadRequestError("An account with that email already exists", nil)
 	}
 
-	err, tokenRecord := createEmailAuthToken(app, authCollection, email, "signup")
+	tokenRecord, err := createEmailAuthToken(app, authCollection, email, "signup")
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func finishSignup(c echo.Context, app *pocketbase.PocketBase, authCollection *mo
 		return err
 	}
 
-	err, userRecord := createNewUser(c, app, authCollection, username, email)
+	userRecord, err := createNewUser(c, app, authCollection, username, email)
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,7 @@ func startLogin(c echo.Context, app *pocketbase.PocketBase, authCollection *mode
 	}
 	email := requestData.Email
 
-	err, userRecord := getUserRecord(app, authCollection, email, true)
+	userRecord, err := getUserRecord(app, authCollection, email, true)
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func startLogin(c echo.Context, app *pocketbase.PocketBase, authCollection *mode
 		return apis.NewNotFoundError("Requested account not found", nil)
 	}
 
-	err, tokenRecord := createEmailAuthToken(app, authCollection, email, "login")
+	tokenRecord, err := createEmailAuthToken(app, authCollection, email, "login")
 	if err != nil {
 		return err
 	}
@@ -210,7 +210,7 @@ func finishLogin(c echo.Context, app *pocketbase.PocketBase, authCollection *mod
 		return err
 	}
 
-	err, userRecord := getUserRecord(app, authCollection, userRequestData.Email, true)
+	userRecord, err := getUserRecord(app, authCollection, userRequestData.Email, true)
 	if err != nil {
 		return err
 	}
