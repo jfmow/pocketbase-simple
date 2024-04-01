@@ -49,18 +49,21 @@ func LoadEmailDataToHTML(app *pocketbase.PocketBase, emailName string, data map[
 	cacheMutex.Lock()
 	defer cacheMutex.Unlock()
 
+	var htmlString string
+
 	// Check if the email is already cached and within the 5-minute validity period
 	if cachedEmail, ok := cache[emailName]; ok && time.Since(cachedEmail.StoredAt) <= 5*time.Minute {
-		return cachedEmail.HTMLString, nil
+		htmlString = cachedEmail.HTMLString
+	} else {
+		record, err := app.Dao().FindFirstRecordByData("custom_emails", "name", emailName)
+		if err != nil {
+			return "", err
+		}
+
+		htmlString = record.GetString("email")
 	}
 
 	// If not cached or cache expired, fetch from the database
-	record, err := app.Dao().FindFirstRecordByData("custom_emails", "name", emailName)
-	if err != nil {
-		return "", err
-	}
-
-	htmlString := record.GetString("email")
 
 	// Convert the HTML file content to a string
 	tmpl, err := template.New(emailName).Parse(htmlString)

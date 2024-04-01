@@ -53,7 +53,7 @@ func startSignup(c echo.Context, app *pocketbase.PocketBase, authCollection *mod
 	}
 	email := requestData.Email
 
-	_, record := getUserRecord(app, authCollection, email, false) // false because we're checking for in general if someone already has that info
+	record, err := getUserRecord(app, authCollection, email, false) // false because we're checking for in general if someone already has that info
 	if record != nil {
 		return apis.NewBadRequestError("An account with that email already exists", nil)
 	}
@@ -120,12 +120,19 @@ func finishSignup(c echo.Context, app *pocketbase.PocketBase, authCollection *mo
 	username := requestData.Username
 	token := requestData.Token
 
-	err = authenticateEmailAuthToken(app, authCollection, email, token, "signup")
+	//Make sure token is valid but don't invalidate incase there is an error creating account
+	err = authenticateEmailAuthToken(app, authCollection, email, token, "signup", false)
 	if err != nil {
 		return err
 	}
 
 	userRecord, err := createNewUser(c, app, authCollection, username, email)
+	if err != nil {
+		return err
+	}
+
+	// No error creating account so invalidate the token
+	err = authenticateEmailAuthToken(app, authCollection, email, token, "signup", true)
 	if err != nil {
 		return err
 	}
@@ -218,7 +225,7 @@ func finishLogin(c echo.Context, app *pocketbase.PocketBase, authCollection *mod
 		return apis.NewNotFoundError("Requested account not found", nil)
 	}
 
-	err = authenticateEmailAuthToken(app, authCollection, userRequestData.Email, userRequestData.Token, "login")
+	err = authenticateEmailAuthToken(app, authCollection, userRequestData.Email, userRequestData.Token, "login", true)
 	if err != nil {
 		return err
 	}

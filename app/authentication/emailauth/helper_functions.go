@@ -189,7 +189,7 @@ Verifys a provided sso token is valid and the user requested is the one for that
 
 - Errors with apis. for simplicty
 */
-func authenticateEmailAuthToken(app *pocketbase.PocketBase, authCollection *models.Collection, userEmail string, token string, tokenMethod string) error {
+func authenticateEmailAuthToken(app *pocketbase.PocketBase, authCollection *models.Collection, userEmail string, token string, tokenMethod string, invalidateToken bool) error {
 	if userEmail == "" || !isValidEmail(userEmail) {
 		return genericInvalidRequestDataError
 	}
@@ -215,9 +215,12 @@ func authenticateEmailAuthToken(app *pocketbase.PocketBase, authCollection *mode
 	}
 
 	// This is in a go func becuase if its not for some reasons this whole code block just breaks. This is just a If it works it works moment
-	go func() {
-		app.Dao().DeleteRecord(userTokenRecord)
-	}()
+	if invalidateToken {
+		go func() {
+			app.Dao().DeleteRecord(userTokenRecord)
+		}()
+	}
+
 	/*
 		The token is valid
 
@@ -320,7 +323,7 @@ func getUserRequestData(c echo.Context, app *pocketbase.PocketBase, authCollecti
 		case "token":
 			token = c.FormValue("token")
 			if token != "" {
-				err = authenticateEmailAuthToken(app, authCollection, email, token, tokenMethod)
+				err = authenticateEmailAuthToken(app, authCollection, email, token, tokenMethod, false)
 				if err != nil {
 					return nil, err
 				}
