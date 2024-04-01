@@ -91,7 +91,10 @@ func createNewUser(c echo.Context, app *pocketbase.PocketBase, authCollection *m
 		UploadedFiles:       nil,                                                  // Assign your map[string][]*filesystem.File
 	}
 
-	app.OnRecordAfterCreateRequest(authCollection.Name).Trigger(event)
+	err = app.OnRecordAfterCreateRequest(authCollection.Name).Trigger(event)
+	if err != nil {
+		return err, nil
+	}
 
 	return nil, newUserRecord
 }

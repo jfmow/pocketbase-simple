@@ -77,7 +77,7 @@ func LoadEmailDataToHTML(app *pocketbase.PocketBase, emailName string, data map[
 
 	// Update the cache with the new data and timestamp
 	cache[emailName] = CachedEmail{
-		HTMLString: modifiedHTMLBuffer.String(),
+		HTMLString: htmlString,
 		StoredAt:   time.Now().UTC(),
 	}
 
