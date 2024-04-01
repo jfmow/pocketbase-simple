@@ -19,5 +19,11 @@ func SendCustomEmail(subject string, recp []mail.Address, data string, app *pock
 		// bcc, cc, attachments and custom headers are also supported...
 	}
 
-	return app.NewMailClient().Send(message)
+	err := app.NewMailClient().Send(message)
+
+	if err != nil {
+		app.Logger().Error("Unable to send emails")
+	}
+
+	return err
 }

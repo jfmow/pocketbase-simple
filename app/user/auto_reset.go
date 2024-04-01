@@ -1,4 +1,4 @@
-package reset
+package user
 
 import (
 	"log"
@@ -7,11 +7,17 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/cron"
-	"suddsy.dev/m/v2/app/user"
+	"suddsy.dev/m/v2/app/user/account"
 )
 
-func EnableAutoResetCron(app *pocketbase.PocketBase, scheduler *cron.Cron) error {
+/*
+Automaticly resets the database every 6 hours
 
+This is only for the demo website and even then doesn't really need to be here
+
+  - Will be removed in future
+*/
+func EnableAutoResetCron(app *pocketbase.PocketBase, scheduler *cron.Cron) error {
 	// prints "Hello!" every 2 minutes
 	autoReset, found := os.LookupEnv("AUTO_RESET")
 
@@ -48,7 +54,7 @@ func EnableAutoResetCron(app *pocketbase.PocketBase, scheduler *cron.Cron) error
 				}
 
 			}
-			user.CreatePreviewPage(app, "")
+			account.CreatePreviewPage(app, "")
 		})
 
 	}

@@ -7,8 +7,8 @@ import (
 	"suddsy.dev/m/v2/app/authentication"
 	"suddsy.dev/m/v2/app/user"
 	"suddsy.dev/m/v2/app/user/account"
+	"suddsy.dev/m/v2/app/user/pages"
 	"suddsy.dev/m/v2/tools"
-	"suddsy.dev/m/v2/tools/reset"
 
 	"github.com/joho/godotenv"
 	"github.com/pocketbase/pocketbase"
@@ -28,14 +28,13 @@ func main() {
 	// serves static files from the provided public dir (if exists)
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./pb_public"), false))
-		user.RegisterPingRoutes(e, app)
 		tools.CreateDownloadEndpoint(e, app)
 		authentication.RegisterSSORoutes(e, app)
-		account.RegisterAccPagesRoutes(e, app)
+		pages.RegisterAccPagesRoutes(e, app)
 		account.HandleRegisterRoutes(e, app)
 
 		scheduler := cron.New()
-		reset.EnableAutoResetCron(app, scheduler)
+		user.EnableAutoResetCron(app, scheduler)
 		scheduler.Start()
 
 		return nil
@@ -51,7 +50,7 @@ func main() {
 	})
 
 	app.OnRecordAfterCreateRequest("users").Add(func(e *core.RecordCreateEvent) error {
-		return user.NewAccountSetup(e, app)
+		return account.NewAccountSetup(e, app)
 	})
 
 	app.OnRecordAfterUnlinkExternalAuthRequest().Add(func(e *core.RecordUnlinkExternalAuthEvent) error {
@@ -62,7 +61,7 @@ func main() {
 	app.OnRecordAfterDeleteRequest().Add(func(e *core.RecordDeleteEvent) error {
 		if e.Collection.Type == "auth" {
 			//Make sure the flags are deleted on delete
-			user.DeleteUserFlagsOnAccountDelete(e, app)
+			account.DeleteUserFlagsOnAccountDelete(e, app)
 		}
 		return nil
 	})

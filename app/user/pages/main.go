@@ -1,4 +1,4 @@
-package account
+package pages
 
 import (
 	"sync"
@@ -8,6 +8,7 @@ import (
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/models"
+	"suddsy.dev/m/v2/app/user/account"
 )
 
 func RegisterAccPagesRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
@@ -49,7 +50,7 @@ func createBlankPage(c echo.Context, app *pocketbase.PocketBase) error {
 		return c.JSON(302, data)
 	}
 
-	err, pageId := CreatePreviewPage(app, authRecord.Id)
+	err, pageId := account.CreatePreviewPage(app, authRecord.Id)
 
 	if err != nil {
 		return err

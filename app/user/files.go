@@ -13,6 +13,9 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 )
 
+/*
+Run when a new user account is created
+*/
 func HandleCreateEvent(e *core.RecordCreateEvent, app *pocketbase.PocketBase) error {
 	//Check if the user is part of the default user group, and if so find there flags, else return nil
 
@@ -56,6 +59,9 @@ func HandleCreateEvent(e *core.RecordCreateEvent, app *pocketbase.PocketBase) er
 	return nil
 }
 
+/*
+Checks that the files linked in a provided page exist
+*/
 func CheckFilesMatchBlocks(app *pocketbase.PocketBase, c *core.RecordUpdateEvent) error {
 	/**
 	This function checks to see if the images (igms) or files (simpleEmbed) are stored in the db tables but are also actually in the stored page.
