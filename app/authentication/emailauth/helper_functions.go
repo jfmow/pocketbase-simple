@@ -1,4 +1,4 @@
-package authentication
+package emailauth
 
 import (
 	"net/mail"

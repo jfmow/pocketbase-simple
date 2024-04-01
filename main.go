@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"suddsy.dev/m/v2/app/authentication"
+	"suddsy.dev/m/v2/app/authentication/emailauth"
 	"suddsy.dev/m/v2/app/tools"
 	"suddsy.dev/m/v2/app/tools/lifetime"
 	"suddsy.dev/m/v2/app/user"
@@ -30,7 +30,7 @@ func main() {
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./pb_public"), false))
 		tools.CreateDownloadEndpoint(e, app)
-		authentication.RegisterSSORoutes(e, app)
+		emailauth.RegisterSSORoutes(e, app)
 		pages.RegisterAccPagesRoutes(e, app)
 		account.HandleRegisterRoutes(e, app)
 
@@ -55,8 +55,7 @@ func main() {
 	})
 
 	app.OnRecordAfterUnlinkExternalAuthRequest().Add(func(e *core.RecordUnlinkExternalAuthEvent) error {
-
-		return authentication.EnableFromOAuthUnlink(app, e)
+		return emailauth.EnableFromOAuthUnlink(app, e)
 	})
 
 	app.OnRecordAfterDeleteRequest().Add(func(e *core.RecordDeleteEvent) error {
