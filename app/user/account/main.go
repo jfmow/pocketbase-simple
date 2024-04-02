@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
@@ -15,11 +14,6 @@ import (
 
 func NewAccountSetup(e *core.RecordCreateEvent, app *pocketbase.PocketBase) error {
 	user := e.Record.Id
-
-	if runtime.GOOS != "linux" {
-		log.Panic("Update cancled. This tool only works on linux systems :(")
-		return nil
-	}
 
 	_, err := CreatePreviewPage(app, user)
 	if err != nil {
