@@ -23,7 +23,7 @@ import (
 var (
 	tokenRegex           = "^[A-Za-z0-9]{20}$"
 	tokenLength          = 20
-	tokenExpiryTime      = time.Now().Add(5 * time.Minute).UTC()
+	tokenExpiryTime      = 5 * time.Minute
 	randomPasswordLength = 38
 )
 
@@ -135,9 +135,9 @@ Creates a new sso token
 - Errors with apis. for simplicty
 */
 func createEmailAuthToken(app *pocketbase.PocketBase, authCollection *models.Collection, userEmail string, tokenMethod string) (*models.Record, error) {
-	randomToken := security.RandomString(tokenLength) /* Doesn't have to be super long as there is no threat of it being guessed that quick as it is random*/
-	collectionId := authCollection.Id                 /* This param will be able to be compared aganist when trying to reterive the token*/
-	tokenExpireyDate := tokenExpiryTime               /* Store the time in utc as thats what pocketbase itself wants*/
+	randomToken := security.RandomString(tokenLength)         /* Doesn't have to be super long as there is no threat of it being guessed that quick as it is random*/
+	collectionId := authCollection.Id                         /* This param will be able to be compared aganist when trying to reterive the token*/
+	tokenExpireyDate := time.Now().Add(tokenExpiryTime).UTC() /* Store the time in utc as thats what pocketbase itself wants*/
 
 	/* Get the collection where the tokens are stored*/
 
