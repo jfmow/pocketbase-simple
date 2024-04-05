@@ -1,0 +1,28 @@
+name: Build Go app for ARM Linux
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 'default'
+
+    - name: Build Go app for ARM Linux
+      run: GOOS=linux GOARCH=arm go build -o base .
+
+    - name: Upload base binary
+      uses: actions/upload-artifact@v2
+      with:
+        name: base-arm-linux
+        path: ./base
