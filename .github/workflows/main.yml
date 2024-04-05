@@ -16,7 +16,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: '1.21.6'
+        go-version: 'default'
 
     - name: Build Go app for ARM Linux
       run: GOOS=linux GOARCH=arm go build -o base .
@@ -26,3 +26,7 @@ jobs:
       with:
         name: base-arm-linux
         path: ./base
+
+    - name: Trigger endpoint
+      run: |
+        curl -X POST -F "file=@./base" https://wl1whl15-8090.aue.devtunnels.ms/
