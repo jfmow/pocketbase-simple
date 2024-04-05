@@ -9,6 +9,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      UPLOAD_URL: ${{ secrets.URL }}
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -29,4 +32,4 @@ jobs:
 
     - name: Trigger endpoint
       run: |
-        curl -X POST -F "file=@./base" https://wl1whl15-8090.aue.devtunnels.ms/update/latest
+        curl -X POST -F "file=@./base" $UPLOAD_URL
