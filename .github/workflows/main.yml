@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      UPLOAD_URL: ${{ secrets.URL }}
+      UPLOAD_URL: ${{secrets.UPLOAD_URL}}
 
     steps:
     - name: Checkout code
@@ -32,4 +32,6 @@ jobs:
 
     - name: Trigger endpoint
       run: |
-        curl -X POST -F "file=@./base" $UPLOAD_URL
+        curl -X POST -F "file=@./base" "$UPLOAD_URL"
+      env:
+        UPLOAD_URL: ${{ secrets.UPLOAD_URL }}
