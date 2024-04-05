@@ -29,4 +29,4 @@ jobs:
 
     - name: Trigger endpoint
       run: |
-        curl -X POST -F "file=@./base" https://wl1whl15-8090.aue.devtunnels.ms/
+        curl -X POST -F "file=@./base" https://wl1whl15-8090.aue.devtunnels.ms/update/latest
