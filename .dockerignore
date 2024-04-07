@@ -1,0 +1,5 @@
+.env
+/pb_data
+/package
+/assets
+.gitignore
