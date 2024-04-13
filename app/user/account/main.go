@@ -12,6 +12,11 @@ import (
 	"suddsy.dev/m/v2/app/tools"
 )
 
+var (
+	starterQuota = 2684354560
+	thinkerQuota = starterQuota * 2
+)
+
 func NewAccountSetup(e *core.RecordCreateEvent, app *pocketbase.PocketBase) error {
 	user := e.Record.Id
 
@@ -32,7 +37,7 @@ func NewAccountSetup(e *core.RecordCreateEvent, app *pocketbase.PocketBase) erro
 
 	// In bytes
 	newUserFlagsRecord.Set("maxUploadSize", 5485760)
-	newUserFlagsRecord.Set("quota", 10485760)
+	newUserFlagsRecord.Set("quota", starterQuota)
 
 	if sso, ok := e.HttpContext.Get("sso").(bool); ok {
 		// Value exists, proceed with your logic

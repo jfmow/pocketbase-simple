@@ -4,6 +4,10 @@ FROM alpine:latest
 COPY ./base /pb/base
 COPY ./preview_page.json /pb/preview_page.json
 
+ENV UpdateToken="" \
+    UpdateURL="" \
+    website_url="" \
+    email_reply_to=""
 EXPOSE 8085
 RUN chmod +x /pb/base
 
