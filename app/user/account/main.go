@@ -22,6 +22,14 @@ var (
 
 /*
 Run when a new user account it created
+
+Creates:
+
+- User flags
+
+- First page
+
+Sends welcome email
 */
 func NewAccountSetup(e *core.RecordCreateEvent, app *pocketbase.PocketBase) error {
 	user := e.Record.Id

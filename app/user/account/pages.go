@@ -10,6 +10,10 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 )
 
+/*
+TODO: Remove, just let the user have no pages
+Will be removed in the future
+*/
 func RegisterAccPagesRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 	e.Router.GET("/api/collections/:collection/account/create-empty-page", func(c echo.Context) error {
 		return createBlankPage(c, app)
@@ -44,11 +48,13 @@ func createBlankPage(c echo.Context, app *pocketbase.PocketBase) error {
 	pagesSearchRecord, err := app.Dao().FindFirstRecordByData("pages", "user", authRecord.Id)
 
 	if err == nil {
+		//A page was found so don't make the default page
 		data["id"] = pagesSearchRecord.Id
 
 		return c.JSON(302, data)
 	}
 
+	//No page was found so make the default preview page
 	pageId, err := CreatePreviewPage(app, authRecord.Id)
 
 	if err != nil {
