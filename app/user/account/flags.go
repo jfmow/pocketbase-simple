@@ -9,6 +9,9 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 )
 
+/*
+These routes can only be accesed by the "admins" collection
+*/
 func HandleRegisterRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 	e.Router.POST("/api/collections/:collection/flags/update", func(c echo.Context) error {
 		return updateFlagsDynamic(c, app)

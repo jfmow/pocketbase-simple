@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/models"
@@ -19,6 +20,9 @@ var (
 	thinkerQuota int64 = starterQuota * 2
 )
 
+/*
+Run when a new user account it created
+*/
 func NewAccountSetup(e *core.RecordCreateEvent, app *pocketbase.PocketBase) error {
 	user := e.Record.Id
 
@@ -66,9 +70,17 @@ func NewAccountSetup(e *core.RecordCreateEvent, app *pocketbase.PocketBase) erro
 	return nil
 }
 
+/*
+Deletes the flag record for a given user id
+
+- This is required becuase the user is not restricted to a collection but the flags could affect more if you make more user collections
+*/
 func DeleteUserFlagsOnAccountDelete(e *core.RecordDeleteEvent, app *pocketbase.PocketBase) error {
 	// Make sure the flags are deleted on delete
-	record, err := app.Dao().FindFirstRecordByData("user_flags", "user", e.Record.Id)
+	record, err := app.Dao().FindFirstRecordByFilter(
+		"user_flags", "user = {:userId} && collection = {:collectionId}",
+		dbx.Params{"userId": e.Record.Id, "collectionId": e.Record.Collection().Id},
+	)
 	if err != nil {
 		return err
 	}
@@ -79,6 +91,14 @@ func DeleteUserFlagsOnAccountDelete(e *core.RecordDeleteEvent, app *pocketbase.P
 	return nil
 }
 
+/*
+Creates the welcome page
+
+# IS NOT A ROUTE
+
+- Used to create the demo with no owner and shared
+- Used to create the first page for a new user
+*/
 func CreatePreviewPage(app *pocketbase.PocketBase, user string) (string, error) {
 	WorkingDir := tools.GetWorkDir()
 	type Page struct {
