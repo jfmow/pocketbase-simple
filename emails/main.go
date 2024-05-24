@@ -1,6 +1,7 @@
 package emails
 
 import (
+	"log"
 	"net/mail"
 
 	"github.com/pocketbase/pocketbase"
@@ -22,6 +23,7 @@ func SendCustomEmail(subject string, recp []mail.Address, data string, app *pock
 	err := app.NewMailClient().Send(message)
 
 	if err != nil {
+		log.Println(err)
 		app.Logger().Error("Unable to send emails")
 	}
 

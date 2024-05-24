@@ -3,6 +3,7 @@ package account
 import (
 	"encoding/json"
 	"log"
+	"net/mail"
 	"os"
 	"path/filepath"
 
@@ -10,11 +11,12 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/models"
 	"suddsy.dev/m/v2/app/tools"
+	"suddsy.dev/m/v2/emails"
 )
 
 var (
-	starterQuota = 2684354560
-	thinkerQuota = starterQuota * 2
+	starterQuota int64 = 2684354560
+	thinkerQuota int64 = starterQuota * 2
 )
 
 func NewAccountSetup(e *core.RecordCreateEvent, app *pocketbase.PocketBase) error {
@@ -49,6 +51,17 @@ func NewAccountSetup(e *core.RecordCreateEvent, app *pocketbase.PocketBase) erro
 	if err := app.Dao().SaveRecord(newUserFlagsRecord); err != nil {
 		return err
 	}
+
+	go func() {
+		email, err := emails.LoadEmailDataToHTML(app, "welcome", nil)
+		if err != nil {
+			return
+		}
+
+		emails.SendCustomEmail("Welcome", []mail.Address{
+			{Name: e.Record.Username(), Address: e.Record.Email()},
+		}, email, app)
+	}()
 
 	return nil
 }
