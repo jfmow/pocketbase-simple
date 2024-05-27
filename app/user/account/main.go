@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	starterQuota int64 = 2684354560
-	thinkerQuota int64 = starterQuota * 2
+	starterQuota         int64 = 20000000
+	defaultMaxUploadSize int64 = 5485760
 )
 
 /*
@@ -50,7 +50,7 @@ func NewAccountSetup(e *core.RecordCreateEvent, app *pocketbase.PocketBase) erro
 	newUserFlagsRecord.Set("collection", e.Record.Collection().Id)
 
 	// In bytes
-	newUserFlagsRecord.Set("maxUploadSize", 5485760)
+	newUserFlagsRecord.Set("maxUploadSize", defaultMaxUploadSize)
 	newUserFlagsRecord.Set("quota", starterQuota)
 
 	if sso, ok := e.HttpContext.Get("sso").(bool); ok {
