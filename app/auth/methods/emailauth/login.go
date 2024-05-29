@@ -33,10 +33,10 @@ func startLogin(app *pocketbase.PocketBase, c echo.Context) error {
 		apis.NewBadRequestError("No user found", nil)
 	}
 
-	canView, err := app.Dao().CanAccessRecord(userRecord, apis.RequestInfo(c), collection.ViewRule)
+	/*canView, err := app.Dao().CanAccessRecord(userRecord, apis.RequestInfo(c), collection.ViewRule)
 	if !canView {
 		return apis.NewForbiddenError("", err)
-	}
+	}*/
 
 	token, err := tokens.Initialise(email, collection, true).CreateNewToken("emailauthlogin", app)
 	if err != nil {
