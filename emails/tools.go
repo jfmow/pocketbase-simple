@@ -3,41 +3,15 @@ package emails
 import (
 	"bytes"
 	"html/template"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/tools/security"
 )
 
-func LoadHtmlFile(filePath string, data map[string]interface{}) (error, string) {
-	htmlFile, err := os.ReadFile(filePath)
-	if err != nil {
-		return err, ""
-	}
-
-	// Convert the HTML file content to a string
-	htmlString := string(htmlFile)
-	tmpl, err := template.New(security.RandomString(12)).Parse(htmlString)
-	if err != nil {
-		return err, ""
-	}
-	var modifiedHTMLBuffer bytes.Buffer
-
-	// Apply the dynamic data to the template and write the result to the buffer
-	err = tmpl.Execute(&modifiedHTMLBuffer, data)
-	if err != nil {
-		return err, ""
-	}
-
-	// Get the final HTML string with dynamic content
-	return nil, modifiedHTMLBuffer.String()
-}
-
 type CachedEmail struct {
-	HTMLString string
-	StoredAt   time.Time
+	Template *template.Template
+	StoredAt time.Time
 }
 
 var (
@@ -49,11 +23,11 @@ func LoadEmailDataToHTML(app *pocketbase.PocketBase, emailName string, data map[
 	cacheMutex.Lock()
 	defer cacheMutex.Unlock()
 
-	var htmlString string
+	var emailTemplate *template.Template
 
-	// Check if the email is already cached and within the 5-minute validity period
+	// Check if the email template is already cached and within the 5-minute validity period
 	if cachedEmail, ok := cache[emailName]; ok && time.Since(cachedEmail.StoredAt) <= 1*time.Minute {
-		htmlString = cachedEmail.HTMLString
+		emailTemplate = cachedEmail.Template
 	} else {
 		// If not cached or cache expired, fetch from the database
 		record, err := app.Dao().FindFirstRecordByData("custom_emails", "name", emailName)
@@ -61,24 +35,25 @@ func LoadEmailDataToHTML(app *pocketbase.PocketBase, emailName string, data map[
 			return "", err
 		}
 
-		htmlString = record.GetString("email_rich")
+		emailHtmlString := record.GetString("email_rich")
+
+		// Parse the HTML string as a template
+		emailTemplate, err = template.New(emailName).Parse(emailHtmlString)
+		if err != nil {
+			return "", err
+		}
+
+		// Update the cache with the new template and HTML string
+		cache[emailName] = CachedEmail{
+			Template: emailTemplate,
+			StoredAt: time.Now().UTC(),
+		}
 	}
 
-	cache[emailName] = CachedEmail{
-		HTMLString: htmlString,
-		StoredAt:   time.Now().UTC(),
-	}
-
-	// Convert the HTML file content to a template
-	tmpl, err := template.New(emailName).Parse(htmlString)
-	if err != nil {
-		return "", err
-	}
 	var modifiedHTMLBuffer bytes.Buffer
 
 	// Apply the dynamic data to the template and write the result to the buffer
-
-	err = tmpl.Execute(&modifiedHTMLBuffer, data)
+	err := emailTemplate.Execute(&modifiedHTMLBuffer, data)
 	if err != nil {
 		return "", err
 	}

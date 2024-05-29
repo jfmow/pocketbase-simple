@@ -4,8 +4,7 @@ import (
 	"log"
 	"os"
 
-	"suddsy.dev/m/v2/app/authentication/emailauth"
-	"suddsy.dev/m/v2/app/tools"
+	"suddsy.dev/m/v2/app/auth/methods/emailauth"
 	"suddsy.dev/m/v2/app/tools/lifetime"
 	"suddsy.dev/m/v2/app/user"
 	"suddsy.dev/m/v2/app/user/account"
@@ -16,7 +15,6 @@ import (
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/cron"
-	"github.com/spf13/cobra"
 )
 
 func main() {
@@ -29,8 +27,7 @@ func main() {
 	// serves static files from the provided public dir (if exists)
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./pb_public"), false))
-		tools.CreateDownloadEndpoint(e, app)
-		emailauth.RegisterSSORoutes(e, app)
+		emailauth.RegisterEmailAuthRoutes(e, app)
 		pages.RegisterAccPagesRoutes(e, app)
 		account.HandleRegisterRoutes(e, app)
 
@@ -66,14 +63,8 @@ func main() {
 		return nil
 	})
 
-	app.RootCmd.AddCommand(&cobra.Command{
-		Use: "updateme",
-		Run: func(cmd *cobra.Command, args []string) {
-			tools.Update()
-		},
-	})
-
 	if err := app.Start(); err != nil {
 		log.Fatal(err)
 	}
+
 }
