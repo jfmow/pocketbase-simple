@@ -96,7 +96,7 @@ func (token *Token) Save() (*Token, error) {
 	// or bulk load with record.Load(map[string]any{...})
 	tokenCollectionRecord.Set("user_email", token.User.Email)
 	tokenCollectionRecord.Set("auth_collection_id", token.User.Collection.Id)
-	tokenCollectionRecord.Set("token", token.Value)
+	tokenCollectionRecord.Set("token", security.SHA256(token.Value))
 	tokenCollectionRecord.Set("expires", tokenExpiryDate)
 	tokenCollectionRecord.Set("reason", token.Reason)
 
@@ -130,6 +130,7 @@ func (token *Token) Verify(app *pocketbase.PocketBase) error {
 	}
 
 	if time.Now().UTC().After(tokenRecord.GetDateTime("expires").Time()) {
+		token.RemoveToken(app)
 		return NewTokenError("Token is expired")
 	}
 
@@ -163,7 +164,7 @@ If not found record will be blank and there will be an generic error
 func (token *Token) FindTokenByToken(app *pocketbase.PocketBase) (*models.Record, error) {
 	record, err := app.Dao().FindFirstRecordByFilter(
 		"tokens", "token = {:token} && user_email = {:email} && auth_collection_id = {:collectionId} && reason = {:reason}",
-		dbx.Params{"token": token.Value, "email": token.User.Email, "collectionId": token.User.Collection.Id, "reason": token.Reason},
+		dbx.Params{"token": security.SHA256(token.Value), "email": token.User.Email, "collectionId": token.User.Collection.Id, "reason": token.Reason},
 	)
 	return record, err
 }
