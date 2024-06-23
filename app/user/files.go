@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"strings"
-	"time"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
@@ -69,11 +68,11 @@ func CheckFilesMatchBlocks(app *pocketbase.PocketBase, c *core.RecordUpdateEvent
 
 	To prevent deletion of files by mistake it checks the data that was just sent to the server rather than getting it from the server and potentialy being ahed of the servers db saving
 	*/
-	if !time.Now().UTC().After(c.Record.GetDateTime("last_file_check").Time().UTC().Add(30 * time.Minute)) {
+	/*if !time.Now().UTC().After(c.Record.GetDateTime("last_file_check").Time().UTC().Add(30 * time.Minute)) {
 		// Return because the record has been checked less than 1 hour ago
 		//This reduces the overall pressure on the db as it finds all the records for a page, it now only has to do this when a page is updated and once per hour. (This time may be extended in high traffic enviroments but it doesn't really make a difference)
 		return nil
-	}
+	}*/
 
 	jsonData := c.Record.GetString("content")
 
@@ -99,6 +98,7 @@ func CheckFilesMatchBlocks(app *pocketbase.PocketBase, c *core.RecordUpdateEvent
 	err := json.Unmarshal([]byte(jsonData), &record)
 	if err != nil {
 		log.Fatal(err)
+		return nil
 	}
 
 	fileBlocks := []Block{}
@@ -131,7 +131,7 @@ func CheckFilesMatchBlocks(app *pocketbase.PocketBase, c *core.RecordUpdateEvent
 			}
 		}
 	}
-	c.Record.Set("last_file_check", time.Now().UTC())
+	/*c.Record.Set("last_file_check", time.Now().UTC())*/
 	if err := app.Dao().SaveRecord(c.Record); err != nil {
 		return err
 	}
