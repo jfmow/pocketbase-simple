@@ -1,6 +1,7 @@
 package tokens
 
 import (
+	"log"
 	"time"
 
 	"github.com/pocketbase/dbx"
@@ -52,6 +53,10 @@ func (user *TokenUser) CreateNewToken(reason string, app *pocketbase.PocketBase)
 	}
 
 	randomTokenString := security.RandomString(15)
+
+	/*if val, _ := os.LookupEnv("PRODUCTION"); val == "false" {
+		fmt.Println(randomTokenString)
+	}*/
 
 	token := &Token{
 		Value:  randomTokenString,
@@ -180,4 +185,30 @@ func (user *TokenUser) findUserRecord(app *pocketbase.PocketBase) (*models.Recor
 	}
 	record, err := app.Dao().FindAuthRecordByEmail(user.Collection.Id, user.Email)
 	return record, err
+}
+
+func (token *Token) CheckExistingToken() bool {
+	if token.App == nil {
+		log.Panicln("No app provided")
+		return false
+	}
+	record, err := token.App.Dao().FindFirstRecordByFilter(
+		"tokens", "user_email = {:email} && auth_collection_id = {:collectionId} && reason = {:reason}",
+		dbx.Params{"email": token.User.Email, "collectionId": token.User.Collection.Id, "reason": token.Reason},
+	)
+
+	if record != nil || err == nil {
+
+		if time.Now().UTC().After(record.GetDateTime("expires").Time()) {
+			token.App.Dao().DeleteRecord(record)
+			//The token is expired
+			return false
+		} else {
+			//The token is still valid
+			return true
+		}
+
+	} else {
+		return false
+	}
 }

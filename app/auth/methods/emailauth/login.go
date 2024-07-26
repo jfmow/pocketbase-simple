@@ -8,6 +8,8 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
+	"github.com/pocketbase/pocketbase/tools/security"
+	"suddsy.dev/m/v2/app/auth/2fa/otp"
 	"suddsy.dev/m/v2/app/auth/tokens"
 )
 
@@ -43,6 +45,10 @@ func startLogin(app *pocketbase.PocketBase, c echo.Context) error {
 		return apis.NewApiError(500, "Problem occured creating a temp auth token", nil)
 	}
 
+	if token.CheckExistingToken() {
+		return apis.NewApiError(500, "A token already exists that hasn't expired", nil)
+	}
+
 	emailData := make(map[string]interface{})
 
 	replyToAddress, found := os.LookupEnv("email_reply_to")
@@ -74,7 +80,7 @@ func startLogin(app *pocketbase.PocketBase, c echo.Context) error {
 	emailData["subject"] = "Login token"
 	emailData["recp"] = email
 	emailData["replyTo"] = replyToAddress
-	emailData["buttonLink"] = appURLEnv + "/auth/login?token=" + token.Value + "&email=" + email
+
 	emailData["recpName"] = ""
 
 	//Save the token to the db
@@ -83,12 +89,26 @@ func startLogin(app *pocketbase.PocketBase, c echo.Context) error {
 		return apis.NewApiError(500, "An error occured while trying to save", nil)
 	}
 
+	identifer := security.SHA256(userRecord.Id + userRecord.Email() + userRecord.Collection().Name)
+
+	resData := make(map[string]interface{})
+	resData["message"] = "Token email sent to: " + email
+	resData["code"] = 200
+
+	if otp.CheckIfOTPUserExists(app, identifer) {
+		resData["2fa"] = "required"
+		emailData["buttonLink"] = appURLEnv + "/auth/login?token=" + token.Value + "&email=" + email + "&2fa=1"
+	} else {
+		emailData["buttonLink"] = appURLEnv + "/auth/login?token=" + token.Value + "&email=" + email
+	}
+
 	err = sendEmailWithToken(app, emailData)
 	if err != nil {
 		return apis.NewApiError(500, "Problem sending email", nil)
 	}
 
-	return c.String(200, "Token email sent to: "+email)
+	return c.JSON(200, resData)
+
 }
 
 func finishLogin(app *pocketbase.PocketBase, c echo.Context) error {
@@ -111,12 +131,27 @@ func finishLogin(app *pocketbase.PocketBase, c echo.Context) error {
 		return apis.NewUnauthorizedError(err.Error(), nil)
 	}
 
-	_ = token.RemoveToken(app)
-
 	userRecord, err := getUserRecord(app, collection, email)
 	if err != nil || userRecord == nil {
 		apis.NewBadRequestError("No user found", nil)
 	}
 
+	//2FA
+	identifer := security.SHA256(userRecord.Id + userRecord.Email() + userRecord.Collection().Name)
+
+	if otp.CheckIfOTPUserExists(app, identifer) {
+		otpCode := c.FormValue("2fa")
+		valid, err := otp.AuthWithOTP(app, identifer, otpCode)
+		if err != nil || !valid {
+			return apis.NewUnauthorizedError("Invalid 2fa code", nil)
+		}
+		//Is valid:
+		//Continue
+	}
+	//End 2FA
+
+	_ = token.RemoveToken(app)
+
 	return apis.RecordAuthResponse(app, c, userRecord, nil)
+
 }

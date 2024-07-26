@@ -2,11 +2,15 @@ module suddsy.dev/m/v2
 
 go 1.21.6
 
-require github.com/pocketbase/pocketbase v0.22.10
+require (
+	github.com/pocketbase/pocketbase v0.22.10
+	github.com/pquerna/otp v1.4.0
+)
 
 require (
 	cloud.google.com/go v0.112.2 // indirect
 	cloud.google.com/go/iam v1.1.7 // indirect
+	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect

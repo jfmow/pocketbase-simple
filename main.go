@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"suddsy.dev/m/v2/app/auth/2fa/otp"
 	"suddsy.dev/m/v2/app/auth/methods/emailauth"
 	"suddsy.dev/m/v2/app/tools/lifetime"
 	"suddsy.dev/m/v2/app/user"
@@ -30,6 +31,7 @@ func main() {
 		emailauth.RegisterEmailAuthRoutes(e, app)
 		pages.RegisterAccPagesRoutes(e, app)
 		account.HandleRegisterRoutes(e, app)
+		otp.RegisterOTPRoutes(e, app)
 
 		scheduler := cron.New()
 		lifetime.EnableAutoResetCron(app, scheduler)
