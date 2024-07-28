@@ -1,4 +1,4 @@
-package otp
+package twofa
 
 import "fmt"
 
@@ -12,7 +12,7 @@ func (e *OTPError) Error() string {
 }
 
 // NewCustomError creates a new CustomError with the given message
-func NewOTPError(format string, a ...interface{}) error {
+func NewTwoFAError(format string, a ...interface{}) error {
 	return &OTPError{
 		Message: fmt.Sprintf(format, a...),
 	}

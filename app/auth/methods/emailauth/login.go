@@ -1,6 +1,7 @@
 package emailauth
 
 import (
+	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -8,8 +9,7 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
-	"github.com/pocketbase/pocketbase/tools/security"
-	"suddsy.dev/m/v2/app/auth/2fa/otp"
+	twofa "suddsy.dev/m/v2/app/auth/TwoFA"
 	"suddsy.dev/m/v2/app/auth/tokens"
 )
 
@@ -44,6 +44,8 @@ func startLogin(app *pocketbase.PocketBase, c echo.Context) error {
 	if err != nil {
 		return apis.NewApiError(500, "Problem occured creating a temp auth token", nil)
 	}
+
+	fmt.Println(token.Value)
 
 	if token.CheckExistingToken() {
 		return apis.NewApiError(500, "A token already exists that hasn't expired", nil)
@@ -89,17 +91,16 @@ func startLogin(app *pocketbase.PocketBase, c echo.Context) error {
 		return apis.NewApiError(500, "An error occured while trying to save", nil)
 	}
 
-	identifer := security.SHA256(userRecord.Id + userRecord.Email() + userRecord.Collection().Name)
-
 	resData := make(map[string]interface{})
 	resData["message"] = "Token email sent to: " + email
 	resData["code"] = 200
 
-	if otp.CheckIfOTPUserExists(app, identifer) {
+	otp, err := twofa.Load(app, userRecord)
+	if err != nil || otp == nil || !otp.IsEnabled() {
+		emailData["buttonLink"] = appURLEnv + "/auth/login?token=" + token.Value + "&email=" + email
+	} else {
 		resData["2fa"] = "required"
 		emailData["buttonLink"] = appURLEnv + "/auth/login?token=" + token.Value + "&email=" + email + "&2fa=1"
-	} else {
-		emailData["buttonLink"] = appURLEnv + "/auth/login?token=" + token.Value + "&email=" + email
 	}
 
 	err = sendEmailWithToken(app, emailData)
@@ -136,17 +137,12 @@ func finishLogin(app *pocketbase.PocketBase, c echo.Context) error {
 		apis.NewBadRequestError("No user found", nil)
 	}
 
-	//2FA
-	identifer := security.SHA256(userRecord.Id + userRecord.Email() + userRecord.Collection().Name)
-
-	if otp.CheckIfOTPUserExists(app, identifer) {
-		otpCode := c.FormValue("2fa")
-		valid, err := otp.AuthWithOTP(app, identifer, otpCode)
-		if err != nil || !valid {
+	otp, err := twofa.Load(app, userRecord)
+	if err == nil && otp != nil {
+		err := otp.AuthWith(c.FormValue("2fa"))
+		if err != nil {
 			return apis.NewUnauthorizedError("Invalid 2fa code", nil)
 		}
-		//Is valid:
-		//Continue
 	}
 	//End 2FA
 
